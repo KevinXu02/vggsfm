@@ -20,17 +20,15 @@ dir="auto">[<a href="https://arxiv.org/pdf/2312.04563.pdf" rel="nofollow">Paper<
 
 **Updates:**
 
-- Happy to share we were ranked 1st 🥇 in the CVPR24 IMC Challenge regarding camera pose (Rot&Trans) estimation.
+- [Jul 28, 2024]
+  - Added support for filtering out dynamic objects using masks. We will add an example soon but you can check `demo_loader.py` for a quick view.
+  - Added support for `visual_dense_point_cloud`.
+  - Added support for `visual_query_points`.
+  - Made `visual_depths` optional.
 
 - [Jul 10, 2024] Now we support exporting dense depth maps!
 
-- [Jun 26, 2024] Excited to release our demo on Hugging Face Space🤗. Try it out [here](https://huggingface.co/spaces/facebook/vggsfm)!
-
-- [Jun 25, 2024] Upgrade to VGGSfM 2.0! More memory efficient, more robust, more powerful, and easier to start!
-
-
-- [Apr 23, 2024] Release the code and model weight for VGGSfM v1.1.
-
+- Happy to share we were ranked 1st 🥇 in the CVPR24 IMC Challenge regarding camera pose (Rot&Trans) estimation.
 
 
 
@@ -73,7 +71,7 @@ python demo.py SCENE_DIR=TO/YOUR/PATH max_query_pts=1024 query_frame_num=6
 
 The reconstruction result (camera parameters and 3D points) will be automatically saved in the COLMAP format at ```output/seq_name```. You can use the [COLMAP GUI](https://colmap.github.io/gui.html) to view them. 
 
-If you want to visualize it more easily, we provide an approach supported by [visdom](https://github.com/fossasia/visdom). To begin using Visdom, start the server by entering ```visdom``` in the command line. Once the server is running, access Visdom by navigating to ```http://localhost:8097``` in your web browser. Now every reconstruction will be visualized and saved to the visdom server by enabling ```visualize=True```:
+If you want to visualize it more easily, we provide an approach supported by [visdom](https://github.com/fossasia/visdom). To begin using Visdom, start the server by entering ```visdom``` in the command line. Once the server is running, access Visdom by navigating to ```http://localhost:8097``` in your web browser. Now every reconstruction will be visualized and saved to the Visdom server by enabling ```visualize=True```:
 
 ```bash
 python demo.py visualize=True ...(other flags)
@@ -105,14 +103,16 @@ Have fun and feel free to create an issue if you meet any problem. SfM is always
 
 ### 4. Dense depth maps (Beta)
 
-We support extracting dense depth maps with the help of [Depth-Anything-V2](https://github.com/DepthAnything/Depth-Anything-V2). Bascially, we align the dense depth prediction from Depth-Anything-V2 using the sparse SfM point cloud predicted by VGGSfM. To enable this, please first download Depth-Anything-V2 and install scikit-learn:
+We support extracting dense depth maps with the help of [Depth-Anything-V2](https://github.com/DepthAnything/Depth-Anything-V2). Bascially, we align the dense depth prediction from Depth-Anything-V2 using the sparse SfM point cloud predicted by VGGSfM. To enable this, please first git clone Depth-Anything-V2 and install scikit-learn:
 
 ```bash
 pip install scikit-learn
 git clone git@github.com:DepthAnything/Depth-Anything-V2.git dependency/depth_any_v2
 ```
 
-Then, you just need to set ```dense_depth=True``` when running demo.py. The depth maps will be saved to a folder called depths under cfg.SCENE_DIR, in the format of COLMAP.  
+Then, you just need to set ```dense_depth=True``` when running demo.py. Depth maps will be saved in the ```depths``` folder under ```cfg.SCENE_DIR```, using the COLMAP format (e.g., ```*.bin```). To visualize 2D depth maps, set ```visual_depths=True```. To visualize the dense point cloud (unprojected dense depth maps) in Visdom, set ```visual_dense_point_cloud=True``` (note it may take seconds to open the Visdom page when there are too many points).
+
+
 
 ### FAQ
 

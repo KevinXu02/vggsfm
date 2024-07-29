@@ -39,7 +39,9 @@ resume_ckpt: ckpt/vggsfm_v2_0_0.bin
 query_by_interval: False
 query_method: "sp+sift"
 
-use_poselib: False
+visual_depths: False
+visual_query_points: False
+visual_dense_point_cloud: False
 
 MODEL:
   _target_: vggsfm.models.VGGSfM

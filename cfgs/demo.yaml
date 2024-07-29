@@ -1,6 +1,6 @@
 hydra:
-    run:
-        dir: .
+  run:
+    dir: .
 
 seed: 0
 img_size: 1024
@@ -26,62 +26,54 @@ visualize: False
 fmat_thres: 4.0
 max_reproj_error: 4.0
 init_max_reproj_error: 4.0
-max_query_pts: 2048
+max_query_pts: 1024
 
 dense_depth: False
 
-shared_camera: False
+shared_camera: True
 
 SCENE_DIR: examples/kitchen
 
-resume_ckpt:  ckpt/vggsfm_v2_0_0.bin
+resume_ckpt: ckpt/vggsfm_v2_0_0.bin
 
 query_by_interval: False
-query_method: "aliked"
+query_method: "sp+sift"
 
-use_poselib: True
-
-
-make_reproj_video: False
-
+use_poselib: False
 
 MODEL:
-    _target_: vggsfm.models.VGGSfM
+  _target_: vggsfm.models.VGGSfM
 
-    TRACK:
-        _target_: vggsfm.models.TrackerPredictor
+  TRACK:
+    _target_: vggsfm.models.TrackerPredictor
 
-        efficient_corr: False
+    efficient_corr: False
 
-        COARSE:
-            stride: 4
-            down_ratio: 2
-            FEATURENET:
-                _target_: vggsfm.models.BasicEncoder
+    COARSE:
+      stride: 4
+      down_ratio: 2
+      FEATURENET:
+        _target_: vggsfm.models.BasicEncoder
 
-            PREDICTOR:
-                _target_: vggsfm.models.BaseTrackerPredictor
+      PREDICTOR:
+        _target_: vggsfm.models.BaseTrackerPredictor
 
-        FINE:
-            FEATURENET:
-                _target_: vggsfm.models.ShallowEncoder
+    FINE:
+      FEATURENET:
+        _target_: vggsfm.models.ShallowEncoder
 
+      PREDICTOR:
+        _target_: vggsfm.models.BaseTrackerPredictor
+        depth: 4
+        corr_levels: 3
+        corr_radius: 3
+        latent_dim: 32
+        hidden_size: 256
+        fine: True
+        use_spaceatt: False
 
-            PREDICTOR:
-                _target_: vggsfm.models.BaseTrackerPredictor
-                depth: 4
-                corr_levels: 3
-                corr_radius: 3
-                latent_dim: 32
-                hidden_size: 256
-                fine: True
-                use_spaceatt: False
+  CAMERA:
+    _target_: vggsfm.models.CameraPredictor
 
-    CAMERA:
-        _target_: vggsfm.models.CameraPredictor
-
-
-    TRIANGULAE:
-        _target_: vggsfm.models.Triangulator
-    
-
+  TRIANGULAE:
+    _target_: vggsfm.models.Triangulator

@@ -55,6 +55,62 @@ try:
 except:
     print("Poselib is not installed. Please disable use_poselib")
 
+from plyfile import PlyData, PlyElement
+import numpy as np
+
+
+def storePly(path, xyz, rgb):
+    dtype = [
+        ("x", "f4"),
+        ("y", "f4"),
+        ("z", "f4"),
+        ("nx", "f4"),
+        ("ny", "f4"),
+        ("nz", "f4"),
+        ("red", "u1"),
+        ("green", "u1"),
+        ("blue", "u1"),
+    ]
+
+    normals = np.zeros_like(xyz)
+
+    elements = np.empty(xyz.shape[0], dtype=dtype)
+    attributes = np.concatenate((xyz, normals, rgb), axis=1)
+    elements[:] = list(map(tuple, attributes))
+
+    vertex_element = PlyElement.describe(elements, "vertex")
+    ply_data = PlyData([vertex_element])
+    ply_data.write(path)
+
+
+def dense_pts_to_ply(path, unproj_dense_points3D):
+    unprojected_rgb_points_list = []
+    pts = []
+    rgbs = []
+    for unproj_img_name in sorted(unproj_dense_points3D.keys()):
+        unprojected_rgb_points = torch.from_numpy(
+            unproj_dense_points3D[unproj_img_name]
+        )
+        unprojected_rgb_points_list.append(unprojected_rgb_points)
+
+        # Separate 3D point locations and RGB colors
+        point_locations = unprojected_rgb_points[0]  # 3D point location
+        rgb_colors = unprojected_rgb_points[1]  # RGB color
+
+        # Create a mask for points within the specified range
+        valid_mask = point_locations.abs().max(-1)[0] <= 512
+        vaild_pts = point_locations[valid_mask]
+        vaild_rgbs = rgb_colors[valid_mask]
+        assert False, vaild_pts.shape
+
+        pts.append(vaild_pts)
+        rgbs.append(vaild_rgbs)
+
+    # change pts and  rgbs to np array
+    pts = np.array(pts)
+    rgbs = np.array(rgbs)
+    storePly(path, pts, rgbs)
+
 
 @hydra.main(config_path="cfgs/", config_name="demo")
 def demo_fn(cfg: DictConfig):
@@ -70,15 +126,15 @@ def demo_fn(cfg: DictConfig):
     # Set seed
     seed_all_random_engines(cfg.seed)
 
+    # here we extract dense depth maps from the images
     image_paths = glob.glob(os.path.join(cfg.SCENE_DIR, "images", "*.png"))
     print(f"Found {len(image_paths)} images in {cfg.SCENE_DIR}/images")
     image_paths.sort()
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    depth_dir = os.path.join(cfg.SCENE_DIR, "depths")
-    if cfg.dense_depth:
-        print("Predicting dense depth maps via monocular depth estimation.")
-        
-        extract_dense_depth_maps_and_save(depth_dir, image_paths, device, cfg)
+
+    # TODO: uncomment this line to extract dense depth maps
+    # device = "cuda" if torch.cuda.is_available() else "cpu"
+    # depth_dir = os.path.join(cfg.SCENE_DIR, "depths")
+    # extract_dense_depth_maps_and_save(depth_dir, image_paths, device, cfg)
 
     # Model instantiation
     model = instantiate(cfg.MODEL, _recursive_=False, cfg=cfg)
@@ -101,15 +157,6 @@ def demo_fn(cfg: DictConfig):
         checkpoint = torch.load(cfg.resume_ckpt)
         model.load_state_dict(checkpoint, strict=True)
         print(f"Successfully resumed from {cfg.resume_ckpt}")
-
-    if cfg.visualize:
-        from pytorch3d.structures import Pointclouds
-        from pytorch3d.vis.plotly_vis import plot_scene
-        from pytorch3d.renderer.cameras import (
-            PerspectiveCameras as PerspectiveCamerasVisual,
-        )
-
-        viz = Visdom()
 
     sequence_list = test_dataset.sequence_list
 
@@ -168,56 +215,10 @@ def demo_fn(cfg: DictConfig):
         os.makedirs(output_path, exist_ok=True)
         reconstruction_pycolmap.write(output_path)
 
-        pred_cameras_PT3D = predictions["pred_cameras_PT3D"]
-
-        if cfg.visualize:
-            if "points3D_rgb" in predictions:
-                pcl = Pointclouds(
-                    points=predictions["points3D"][None],
-                    features=predictions["points3D_rgb"][None],
-                )
-            else:
-                pcl = Pointclouds(points=predictions["points3D"][None])
-
-            visual_cameras = PerspectiveCamerasVisual(
-                R=pred_cameras_PT3D.R,
-                T=pred_cameras_PT3D.T,
-                device=pred_cameras_PT3D.device,
-            )
-
-            visual_dict = {"scenes": {"points": pcl, "cameras": visual_cameras}}
-
-            unproj_dense_points3D = predictions["unproj_dense_points3D"]
-            if unproj_dense_points3D is not None:
-                unprojected_rgb_points_list = []
-                for unproj_img_name in sorted(unproj_dense_points3D.keys()):
-                    unprojected_rgb_points = torch.from_numpy(
-                        unproj_dense_points3D[unproj_img_name]
-                    )
-                    unprojected_rgb_points_list.append(unprojected_rgb_points)
-
-                    # Separate 3D point locations and RGB colors
-                    point_locations = unprojected_rgb_points[0]  # 3D point location
-                    rgb_colors = unprojected_rgb_points[1]  # RGB color
-
-                    # Create a mask for points within the specified range
-                    valid_mask = point_locations.abs().max(-1)[0] <= 512
-
-                    # Create a Pointclouds object with valid points and their RGB colors
-                    point_cloud = Pointclouds(
-                        points=point_locations[valid_mask][None],
-                        features=rgb_colors[valid_mask][None],
-                    )
-
-                    # Add the point cloud to the visual dictionary
-                    visual_dict["scenes"][f"unproj_{unproj_img_name}"] = point_cloud
-
-            fig = plot_scene(visual_dict, camera_scale=0.05)
-
-            env_name = f"demo_visual_{seq_name}"
-            print(f"Visualizing the scene by visdom at env: {env_name}")
-
-            viz.plotlyplot(fig, env=env_name, win="3D")
+        dense_pts_to_ply(
+            os.path.join(output_path, "dense_pts.ply"),
+            predictions["unproj_dense_points3D"],
+        )
 
     return True
 

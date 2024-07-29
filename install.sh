@@ -11,15 +11,15 @@ conda deactivate
 # Set environment variables
 export ENV_NAME=vggsfm
 export PYTHON_VERSION=3.10
-export PYTORCH_VERSION=2.1.0
-export CUDA_VERSION=12.1
+export PYTORCH_VERSION=2.1.2
+export CUDA_VERSION=11.8
 
 # Create a new conda environment and activate it
 conda create -n $ENV_NAME python=$PYTHON_VERSION
 conda activate $ENV_NAME
 
 # Install PyTorch, torchvision, and PyTorch3D using conda
-conda install pytorch=$PYTORCH_VERSION torchvision pytorch-cuda=$CUDA_VERSION -c pytorch -c nvidia
+conda install pytorch=2.1.2 torchvision pytorch-cuda=11.8 -c pytorch -c nvidia
 conda install -c fvcore -c iopath -c conda-forge fvcore iopath
 conda install pytorch3d -c pytorch3d
 
@@ -29,7 +29,7 @@ pip install omegaconf opencv-python einops visdom tqdm
 pip install accelerate==0.24.0
 
 # Install LightGlue
-git clone https://github.com/jytime/LightGlue.git dependency/LightGlue
+# git clone https://github.com/jytime/LightGlue.git dependency/LightGlue
 
 cd dependency/LightGlue/
 python -m pip install -e .  # editable mode
